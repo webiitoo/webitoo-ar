@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Webitoo Lab · Magnetic Flux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Poppins:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Same Webitoo Lab system as the other experiments: full-bleed 3D stage, lesson panel right on desktop / bottom sheet on phones, dark "lab at night" look. */
+:root{
+  --ink:#060a19; --ink-2:#0c1430; --panel:rgba(11,17,40,.88); --line:rgba(120,150,255,.18);
+  --text:#e9eeff; --muted:#98a5cc; --wbc:#1e5eff; --gold:#ffc83d;
+  --f:#22e07a; --b:#2ec5ff; --i:#ff4d3d; --v:#c58bff;
+  --display:"Chakra Petch","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);font-size:15px;overflow:hidden}
+#app{position:fixed;inset:0;direction:ltr}
+#stage{position:absolute;inset:0;
+  background:
+   radial-gradient(ellipse 70% 55% at 40% 45%, rgba(30,94,255,.20), transparent 70%),
+   linear-gradient(transparent 0 calc(100% - 1px), rgba(120,150,255,.05) 0) 0 0/40px 40px,
+   linear-gradient(90deg, transparent 0 calc(100% - 1px), rgba(120,150,255,.05) 0) 0 0/40px 40px,
+   var(--ink)}
+#cam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+canvas#gl{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;touch-action:none}
+.hud{position:absolute;top:0;inset-inline:0;display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 12px;pointer-events:none}
+.hud>*{pointer-events:auto}
+.brand{display:flex;align-items:center;gap:10px;opacity:.92}
+.brand svg{width:34px;height:34px;flex:none}
+.brand b{white-space:nowrap;font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.5px;direction:ltr;display:block;line-height:1}
+.brand small{color:var(--gold);font-size:12px;display:block;margin-top:3px}
+.modes{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+button{font:inherit;color:var(--text);background:rgba(30,94,255,.14);border:1px solid var(--line);border-radius:10px;padding:8px 12px;cursor:pointer;transition:background .15s,border-color .15s}
+button:hover{background:rgba(30,94,255,.28)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+button.primary{background:var(--wbc);border-color:var(--wbc);font-weight:600}
+button.primary:hover{background:#3a72ff}
+button[aria-pressed="true"]{background:rgba(255,200,61,.18);border-color:var(--gold);color:var(--gold)}
+button:disabled{opacity:.4;cursor:default}
+#panel{position:absolute;display:flex;flex-direction:column;gap:12px;background:var(--panel);backdrop-filter:blur(10px);
+  border:1px solid var(--line);overflow:auto;padding:16px}
+@media (min-width:900px){#panel{top:76px;bottom:16px;right:16px;width:360px;border-radius:16px}}
+@media (max-width:899px){.hud{flex-wrap:wrap;row-gap:8px}.modes{flex:1 1 100%;justify-content:flex-start;flex-wrap:nowrap}.modes button{padding:7px 10px;font-size:13px;white-space:nowrap}#btnSound{margin-left:auto}.brand svg{width:28px;height:28px}h2{font-size:22px}#stepText{min-height:0}
+  #panel{left:0;right:0;bottom:0;max-height:44%;gap:10px;border-radius:18px 18px 0 0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}
+  .brand b{font-size:18px}}
+.eyebrow{align-items:center;font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+h2{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.25;margin:2px 0 4px;text-wrap:balance}
+#stepText{margin:0;line-height:1.75;color:#d5ddfa;min-height:3.5em}
+.k-f{color:var(--f);font-weight:600}.k-b{color:var(--b);font-weight:600}.k-i{color:var(--i);font-weight:600}.k-g{color:var(--gold);font-weight:600}.k-v{color:var(--v);font-weight:700}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+.nav .grow{flex:1}
+.formula{direction:ltr;font-variant-numeric:tabular-nums;background:var(--ink-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:4px;text-align:left}
+.formula .eq{font-size:15px}
+.formula .sub{font-size:13px;color:var(--muted)}
+.formula .val{font-size:22px;font-weight:600;color:var(--gold)}
+.formula .dir{font-size:13px;color:var(--muted)}
+.readout{direction:ltr;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.readout>div{background:var(--ink-2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;text-align:left}
+.readout small{display:block;color:var(--muted);font-size:11px;letter-spacing:.4px}
+.readout b{font-family:var(--display);font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.readout .rb b{color:var(--b)}.readout .ra b{color:var(--text)}.readout .rt b{color:var(--v)}.readout .rp b{color:var(--gold)}
+.readout .rl{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.readout .rl b{color:#7fe3ff}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;color:var(--gold);font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+.ctrls{display:grid;gap:12px;margin-top:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>button{flex:1 1 140px}
+label.sl{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+label.sl span{display:flex;justify-content:space-between}
+label.sl output{color:var(--text);font-variant-numeric:tabular-nums;direction:ltr}
+input[type=range]{width:100%;accent-color:var(--gold)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-inline-end:5px;vertical-align:-1px}
+#toast{position:absolute;left:50%;top:84px;transform:translateX(-50%);background:var(--ink-2);border:1px solid var(--gold);color:var(--gold);padding:8px 14px;border-radius:999px;font-size:13px;max-width:calc(100% - 32px);text-align:center;transition:opacity .3s;pointer-events:none}
+#loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px}
+#mindbox{position:absolute;inset:0;overflow:hidden;isolation:isolate;z-index:0;background:#000}
+#mkHint{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);background:rgba(6,10,25,.78);border:1px solid var(--gold);color:var(--text);padding:14px 18px;border-radius:16px;font-size:15px;text-align:center;max-width:calc(100% - 48px);pointer-events:none}
+#mkHint b{color:var(--gold);display:block;font-family:var(--display);font-size:20px;margin-bottom:4px}
+#mkLost{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 14px);transform:translateX(-50%);background:rgba(6,10,25,.7);border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:999px;font-size:12px;white-space:nowrap;pointer-events:none}
+#arHint{position:absolute;left:50%;bottom:52%;transform:translateX(-50%);background:rgba(0,0,0,.6);padding:8px 14px;border-radius:999px;font-size:14px}
+.eyebrow .topic{flex:1;text-align:right;min-width:0}
+button.mini{padding:3px 9px;font-size:12px;text-transform:none;letter-spacing:0;border-radius:8px;flex:none}
+#dock{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:flex;flex-wrap:wrap;justify-content:center;gap:8px;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px;backdrop-filter:blur(10px);width:max-content;max-width:calc(100% - 32px)}
+#dock button{padding:10px 14px}
+@media (max-width:420px){.eyebrow .topic{display:none}}
+#arBar{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);display:flex;justify-content:center;gap:12px;padding:0 16px;pointer-events:none}
+#arBar button{pointer-events:auto;padding:12px 22px;font-size:16px;border-radius:999px;backdrop-filter:blur(8px);box-shadow:0 6px 20px rgba(0,0,0,.35)}
+#arBar #arExit{background:rgba(6,10,25,.72)}
+#app.arMode .hud,#app.arMode #dock,#app.arMode #panel{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<style>
+/* ---------- Webitoo Lab look: Webitoo blue → indigo → purple, Poppins headings ---------- */
+:root{--wbc:#3157FE;--wb1:#17ABF6;--wb2:#3157FE;--wb3:#7634F7;--wbgrad:linear-gradient(90deg,#17ABF6,#3157FE 55%,#7634F7);
+  --line:rgba(96,128,255,.22);--panel:rgba(9,14,38,.9);--display:"Poppins","IBM Plex Sans",system-ui,sans-serif}
+#stage{background:
+   radial-gradient(ellipse 70% 55% at 40% 48%, rgba(49,87,254,.24), transparent 70%),
+   radial-gradient(ellipse 45% 40% at 78% 12%, rgba(118,52,247,.16), transparent 70%),
+   radial-gradient(ellipse 40% 35% at 8% 88%, rgba(23,171,246,.12), transparent 70%),
+   linear-gradient(transparent 0 calc(100% - 1px), rgba(120,150,255,.05) 0) 0 0/40px 40px,
+   linear-gradient(90deg, transparent 0 calc(100% - 1px), rgba(120,150,255,.05) 0) 0 0/40px 40px,
+   #060a1c}
+.brand{gap:9px;opacity:1}
+.brand svg{width:46px!important;height:34px!important}
+.brand b{font-family:"Poppins",system-ui,sans-serif;font-weight:700;font-size:24px;letter-spacing:-.4px;line-height:1}
+.brand b i{font-style:normal;background:var(--wbgrad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand small{color:#7fd3ff;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;margin-top:4px}
+@media (max-width:899px){.brand svg{width:38px!important;height:28px!important}.brand b{font-size:20px}}
+h2{font-family:var(--display);font-weight:700;letter-spacing:-.3px}
+button{background:rgba(49,87,254,.14)}
+button:hover{background:rgba(49,87,254,.28)}
+button.primary{background:var(--wbgrad);border-color:transparent;box-shadow:0 6px 18px rgba(49,87,254,.32)}
+button.primary:hover{background:var(--wbgrad);filter:brightness(1.1)}
+button[aria-pressed="true"]{background:rgba(23,171,246,.16);border-color:#17ABF6;color:#8fdcff}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline-color:#17ABF6}
+#panel{border-color:rgba(96,128,255,.26);box-shadow:0 18px 50px rgba(6,10,28,.5)}
+summary{color:#8fdcff}
+input[type=range]{accent-color:#17ABF6}
+#toast{border-color:#17ABF6;color:#bfe9ff}
+#arHint{border:1px solid rgba(23,171,246,.5)}
+</style>
+
+</head><body>
+
+<div id="app">
+  <div id="stage"><video id="cam" playsinline muted hidden></video><div id="mindbox" hidden></div></div>
+  <div id="loading">Preparing the lab…</div>
+
+  <div class="hud">
+    <div class="brand" aria-label="Webitoo Lab">
+      <svg viewBox="0 0 220 160" aria-hidden="true"><defs><linearGradient id="wbg" x1="18" y1="0" x2="202" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#17ABF6"/><stop offset=".5" stop-color="#3157FE"/><stop offset="1" stop-color="#7634F7"/></linearGradient></defs><path d="M70 130 L56 130 C32 130 18 114 18 98 C18 81 32 67 51 67 C55 41 79 22 108 22 C138 22 160 42 164 68 C187 70 202 86 202 104 C202 119 191 130 170 130 L156 130" fill="none" stroke="url(#wbg)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/><path d="M80 80 L96 120 L112 92 L128 120 L144 80" fill="none" stroke="url(#wbg)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div><b>webit<i>oo</i></b><small>Lab · Physics</small></div>
+    </div>
+    <div class="modes">
+      <button id="btnAR" class="primary" hidden>Show on your table</button>
+      <button id="btnAny" class="primary" hidden title="See the lab in your room through the camera">View in AR</button>
+      <a id="qlLink" rel="ar" href="webitoo_magnetic_flux_ios.usdz" aria-hidden="true" tabindex="-1" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden"><img alt="" width="1" height="1" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></a>
+      <button id="btnCam" aria-pressed="false" hidden>Camera mode</button>
+      <button id="btnSound" aria-pressed="true" title="Electric sound effects">Sound on</button>
+    </div>
+  </div>
+
+  <aside id="panel" aria-live="polite">
+    <div class="eyebrow"><span id="stepNum">Intro</span><span class="topic">Magnetic flux</span><button id="btnHide" class="mini" aria-label="Hide lesson panel">Hide ▾</button></div>
+    <div>
+      <h2 id="stepTitle">Welcome to Webitoo Lab</h2>
+      <p id="stepText">An interactive 3D lab: discover magnetic flux — how much magnetic field passes through a surface.</p>
+    </div>
+    <div class="nav">
+      <button id="btnPrev">Back</button>
+      <button id="btnNext" class="primary grow">Start the experiment</button>
+    </div>
+
+    <div class="formula" aria-label="Magnetic flux">
+      <div class="eq">Φ = B A cos θ     <span style="color:var(--muted)">(weber, Wb)</span></div>
+      <div class="sub" id="sub">0.30 T × 0.030 m² × cos 35°</div>
+      <div class="val" id="phival">Φ = 0.0000 Wb</div>
+      <div class="dir" id="pdir">—</div>
+    </div>
+    <div class="readout" aria-label="Live readout">
+      <div class="rb"><small>FIELD  B</small><b id="rB">0.30 T</b></div>
+      <div class="ra"><small>AREA  A</small><b id="rA">0.030 m²</b></div>
+      <div class="rt"><small>ANGLE  θ</small><b id="rT">35°</b></div>
+      <div class="rp"><small>FLUX  Φ</small><b id="rP">0.0000 Wb</b></div>
+      <div class="rl"><small>LINES THROUGH THE LOOP</small><b id="rL">0</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--b)"></i>Field B</span><span><i style="background:var(--v)"></i>Normal n</span><span><i style="background:var(--gold)"></i>Area A cos θ</span></div>
+
+    <details id="ctrlBox">
+      <summary>Free controls</summary>
+      <div class="ctrls">
+        <div class="row">
+          <button id="cSpin" aria-pressed="false">Spin it ↻</button>
+          <button id="cShadow" aria-pressed="true">Gold shadow</button>
+        </div>
+        <label class="sl" for="sB"><span>Magnetic field B <output id="oB">0.30 T</output></span><input id="sB" type="range" min="0" max="0.5" step="0.01" value="0.3"></label>
+        <label class="sl" for="sA"><span>Loop area A <output id="oA">0.030 m²</output></span><input id="sA" type="range" min="0.01" max="0.05" step="0.005" value="0.03"></label>
+        <label class="sl" for="sT"><span>Angle θ (between B and the normal n) <output id="oT">35°</output></span><input id="sT" type="range" min="0" max="90" step="1" value="35"></label>
+        <div class="row">
+          <button id="cTop">Top view</button>
+          <button id="cView">Reset view</button>
+        </div>
+        <p style="margin:0;font-size:12px;color:var(--muted)">Field lines are drawn denser when B is bigger. The gold shadow is the loop's area projected on a plane perpendicular to B.</p>
+      </div>
+    </details>
+  </aside>
+  <div id="dock" hidden>
+    <button id="dSpin" aria-pressed="false">Spin it ↻</button>
+    <button id="dShow" class="primary">Show lesson ▴</button>
+  </div>
+  <div id="arBar" hidden><button id="arExit" aria-label="Exit table view">✕ Exit</button><button id="arNext" class="primary">Next ›</button></div>
+  <div id="toast" style="opacity:0"></div>
+  <div id="mkHint" hidden><b>Point your camera at the poster</b>The lab will appear on the poster</div>
+  <div id="mkLost" hidden>Keep going — aim back at the poster to lock it again</div>
+  <div id="arHint" hidden>Move your phone slowly until the gold ring appears, then tap to place the lab</div>
+</div>
+
+<script>window.WB_MIND_B64="";window.WB_HOST="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const $ = id => document.getElementById(id);
+try{ await Promise.race([Promise.all([document.fonts.load('600 56px "Chakra Petch"','Field'), document.fonts.load('700 56px "Chakra Petch"','Flux'), document.fonts.load('500 40px "IBM Plex Sans"','a')]), new Promise(r=>setTimeout(r,2500))]); }catch(e){}
+const COL = { F:0x22e07a, B:0x2ec5ff, I:0xff4d3d, gold:0xffc83d, V:0xc58bff, wbc:0x1e5eff };
+const H = 0.20;                 // height of the loop centre / pivot above the table (m)
+const BASE_TOP = 0.022;         // top of the base platform
+const RX = 0.32, RY = 0.13, RZ = 0.16;   // half-sizes of the uniform-field region (m)
+const XS = 0.215;               // x of the plane perpendicular to B that carries the gold shadow
+const ASPECT = 4/3;             // loop width : height
+const MAXL = 260;               // most field lines ever drawn
+const B_MAX = 0.5;
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- state ----------
+const S = { B:0.30, A:0.030, th:35, shadow:true, spin:false };
+const loopDims = A => ({ w:Math.sqrt(A*ASPECT), h:Math.sqrt(A/ASPECT) });   // w × h = A exactly (metres)
+const flux = () => S.B * S.A * Math.cos(THREE.MathUtils.degToRad(S.th));      // Φ = B A cos θ  (Wb)
+
+// ---------- renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.xr.enabled = true;
+renderer.domElement.id = 'gl';
+$('stage').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xbfd2ff, 0x101830, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(0.4,1.2,0.6); sun.castShadow = true;
+sun.shadow.mapSize.set(1024,1024); Object.assign(sun.shadow.camera,{left:-.5,right:.5,top:.5,bottom:-.5,near:.1,far:3});
+scene.add(sun);
+
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 20);
+const HOME = { dir:new THREE.Vector3(0.62,0.42,0.66).normalize(), target:new THREE.Vector3(-0.04,0.19,0) };
+function homeView(){ const asp = innerWidth/innerHeight; const d = asp >= 1 ? 1.15 : Math.min(2.9, 1.15/asp); const tg = HOME.target.clone(); if (asp < 1) tg.x = -0.10; camera.position.copy(tg).addScaledVector(HOME.dir, d); controls && controls.target.copy(tg); }
+function topView(){ const asp = innerWidth/innerHeight; const d = asp >= 1 ? 1.0 : Math.min(2.5, 1.0/asp); const tg = new THREE.Vector3(HOME.target.x, 0.12, 0); if (asp < 1) tg.x = -0.10; camera.position.set(tg.x, tg.y + d, 0.002); controls.target.copy(tg); }
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; homeView();
+controls.minDistance = 0.3; controls.maxDistance = 2.8; controls.maxPolarAngle = Math.PI*0.58;
+
+const world = new THREE.Group(); scene.add(world);
+const lab = new THREE.Group(); world.add(lab);
+const shadowCatcher = new THREE.Mesh(new THREE.CircleGeometry(0.6,48), new THREE.ShadowMaterial({opacity:.35}));
+shadowCatcher.rotation.x = -Math.PI/2; shadowCatcher.receiveShadow = true; world.add(shadowCatcher);
+
+let panelOpen = true;
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect = w/h;
+  if (!panelOpen) camera.setViewOffset(w,h, 0, Math.round(h*0.04), w,h);
+  else if (w >= 900) camera.setViewOffset(w,h, 180,0, w,h);
+  else camera.setViewOffset(w,h, 0, Math.round(h*0.18), w,h);
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+// ---------- helpers ----------
+const hexStr = c => '#'+c.toString(16).padStart(6,'0');
+function paintLabel(g, text, color, fill, textColor){
+  g.clearRect(0,0,512,128);
+  g.fillStyle = fill || 'rgba(6,10,25,.78)';
+  g.beginPath(); g.roundRect(6,14,500,100,50); g.fill();
+  g.strokeStyle = hexStr(color); g.lineWidth = 5; g.stroke();
+  g.fillStyle = textColor || g.strokeStyle; g.font = '600 54px "Chakra Petch", sans-serif';
+  let fs = 54; while (g.measureText(text).width > 470 && fs > 28){ fs -= 2; g.font = `600 ${fs}px "Chakra Petch", sans-serif`; }
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text,256,66);
+}
+function liveLabel(text, color, w=0.11){
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const g = c.getContext('2d'); let last = null;
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:t, depthTest:false, transparent:true }));
+  s.scale.set(w, w/4, 1); s.renderOrder = 10;
+  const api = { s, set(txt){ if (txt === last) return; last = txt; paintLabel(g, txt, color); t.needsUpdate = true; }, redraw(){ const k = last; last = null; this.set(k); } };
+  api.set(text); return api;
+}
+const label = (text, color, w) => liveLabel(text, color, w).s;
+function glowMat(color, k=0.9){ return new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:k, roughness:.35, metalness:.1 }); }
+function arrow(color, text, r=0.0035, lw=0.11){
+  const g = new THREE.Group(), m = glowMat(color);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(r,r,1,16), m);
+  const head = new THREE.Mesh(new THREE.ConeGeometry(r*3.2, r*7.5, 24), m);
+  g.add(shaft, head);
+  const lab = text ? label(text, color, lw) : null; if (lab) g.add(lab);
+  const hl = r*7.5;
+  g.setLen = len => { const s = Math.max(len-hl, 0.001); shaft.scale.y = s; shaft.position.y = s/2; head.position.y = s + hl/2; if(lab) lab.position.y = len + 0.02; };
+  g.point = dir => g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  g.setLen(0.08); g.label = lab;
+  return g;
+}
+const tweens = [];
+function tween(dur, fn, done){ const tw = { t0:performance.now(), dur:reduce?1:dur, fn, done }; tweens.push(tw); return tw; }
+function cancelTween(tw){ const k = tweens.indexOf(tw); if (k >= 0) tweens.splice(k,1); }
+const easeOut = t => 1 - Math.pow(1-t,3);
+const easeInOut = t => t<.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+const easeBack = t => { const c=1.7; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); };
+const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1,1,1), _v = new THREE.Vector3(), _cam = new THREE.Vector3(), _fp = new THREE.Vector3();
+$('loading').remove();
+
+// ---------- the Webitoo Lab base (platform, gold rim, glowing ring, name) ----------
+{
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.37,BASE_TOP,72), new THREE.MeshStandardMaterial({ color:0x0b1230, roughness:.55, metalness:.35 }));
+  disc.position.y = BASE_TOP/2; disc.receiveShadow = true; disc.castShadow = true; lab.add(disc);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.368,0.0036,10,120), new THREE.MeshStandardMaterial({ color:COL.gold, emissive:COL.gold, emissiveIntensity:.35, metalness:1, roughness:.25 }));
+  rim.rotation.x = Math.PI/2; rim.position.y = BASE_TOP-0.001; lab.add(rim);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.335,0.0022,8,120), glowMat(COL.wbc, 1.6));
+  ring.rotation.x = Math.PI/2; ring.position.y = BASE_TOP+0.0006; lab.add(ring);
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 160; const g = c.getContext('2d');
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#5ec4ff'; g.font = '700 92px "Poppins", sans-serif'; g.shadowColor = 'rgba(80,120,255,.95)'; g.shadowBlur = 14;
+  g.fillText('WEBITOO LAB', 512, 84);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const txt = new THREE.Mesh(new THREE.PlaneGeometry(0.22,0.034), new THREE.MeshBasicMaterial({ map:tex, transparent:true, depthWrite:false, toneMapped:false }));
+  txt.rotation.x = -Math.PI/2; txt.position.set(0, BASE_TOP+0.001, 0.285); lab.add(txt);
+  // hub where the pivot stands
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.026,0.03,0.014,32), new THREE.MeshStandardMaterial({ color:0x1b2550, metalness:.8, roughness:.3 }));
+  hub.position.y = BASE_TOP+0.007; hub.castShadow = true; lab.add(hub);
+  const hubRing = new THREE.Mesh(new THREE.TorusGeometry(0.027,0.0022,8,48), glowMat(COL.gold,.6)); hubRing.rotation.x = Math.PI/2; hubRing.position.y = BASE_TOP+0.014; lab.add(hubRing);
+}
+
+// ---------- uniform field: evenly spaced lines + drifting arrowheads ----------
+const lineMat = new THREE.MeshBasicMaterial({ color:0xffffff, toneMapped:false, transparent:true, opacity:.9 });
+const lineMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0013,0.0013,1,6,1,true).rotateZ(Math.PI/2), lineMat, MAXL);
+const glowMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0034,0.0034,1,8,1,true).rotateZ(Math.PI/2),
+  new THREE.MeshBasicMaterial({ color:COL.B, transparent:true, opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false }), MAXL);
+const coneMesh = new THREE.InstancedMesh(new THREE.ConeGeometry(0.0042,0.014,10).rotateZ(-Math.PI/2), new THREE.MeshBasicMaterial({ color:0xffffff, toneMapped:false }), MAXL*2);
+const markMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.0052,12,8), new THREE.MeshBasicMaterial({ color:0xdaf8ff, transparent:true, opacity:.95, blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false }), MAXL);
+[lineMesh, glowMesh, coneMesh, markMesh].forEach((m, k) => { m.frustumCulled = false; m.count = 0; m.renderOrder = 3 + k; lab.add(m); });
+lineMesh.setColorAt(0, new THREE.Color(1,1,1)); coneMesh.setColorAt(0, new THREE.Color(1,1,1));
+const regionBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2*RX, 2*RY, 2*RZ)), new THREE.LineBasicMaterial({ color:COL.B, transparent:true, opacity:.28 }));
+regionBox.position.y = H; lab.add(regionBox);
+const regionLab = liveLabel('Uniform field  B →', COL.B, 0.17); regionLab.s.position.set(-0.17, H - RY - 0.03, RZ + 0.015); lab.add(regionLab.s);
+
+const cDim = new THREE.Color(0x0f4259), cBright = new THREE.Color(0x6fe2ff), _c = new THREE.Color();
+const lit = new Float32Array(MAXL), keyArr = new Int32Array(MAXL).fill(-1);
+let flowU = 0, nThread = 0, nTotal = 0;
+const fieldSpacing = B => B <= 0 ? 0 : THREE.MathUtils.clamp(0.08*Math.sqrt(0.05/B), 0.024, 0.12);   // line density grows with B
+function updateField(dt){
+  const d = fieldSpacing(S.B), th = THREE.MathUtils.degToRad(S.th), cT = Math.cos(th), tT = Math.tan(th);
+  const { w, h } = loopDims(S.A), hw = w/2*cT, hh = h/2;
+  flowU = (flowU + dt*0.085) % 1;
+  let n = 0, thread = 0;
+  if (d > 0){
+    const ny = Math.floor(RY/d + 1e-6), nz = Math.floor(RZ/d + 1e-6);
+    for (let i=-ny; i<=ny; i++) for (let j=-nz; j<=nz; j++){
+      const yo = i*d, zo = j*d;
+      // a line parallel to B passes through the loop when its (y,z) lies inside the loop's shadow: |z| < (w/2)cos θ and |y| < h/2
+      const hit = cT > 1e-6 && Math.abs(zo) < hw - 1e-9 && Math.abs(yo) < hh - 1e-9;
+      const key = (i+30)*100 + (j+40);
+      if (keyArr[n] !== key){ keyArr[n] = key; lit[n] = hit ? 1 : 0; }
+      lit[n] += ((hit ? 1 : 0) - lit[n]) * Math.min(1, dt*9);
+      const L = lit[n];
+      _p.set(0, H+yo, zo); _s.set(2*RX, 1+0.7*L, 1+0.7*L); _m4.compose(_p, _q.identity(), _s); lineMesh.setMatrixAt(n, _m4);
+      _c.copy(cDim).lerp(cBright, L); lineMesh.setColorAt(n, _c);
+      _s.set(2*RX, L > 0.02 ? L : 0.0001, L > 0.02 ? L : 0.0001); _m4.compose(_p, _q, _s); glowMesh.setMatrixAt(n, _m4);
+      for (let k=0;k<2;k++){
+        const u = (flowU + k*0.5 + ((i*7 + j*13) & 7)/8) % 1, fade = Math.min(1, u*10, (1-u)*10), sc = (1 + 0.8*L)*Math.max(fade, 0.0001);
+        _p.set(-RX + u*2*RX, H+yo, zo); _s.set(sc, sc, sc); _m4.compose(_p, _q, _s); coneMesh.setMatrixAt(n*2+k, _m4); coneMesh.setColorAt(n*2+k, _c);
+      }
+      if (hit){
+        _p.set(THREE.MathUtils.clamp(-zo*tT, -RX, RX), H+yo, zo); _s.setScalar(Math.max(L, 0.0001)); thread++;
+      } else { _p.set(0, H+yo, zo); _s.setScalar(0.0001); }
+      _m4.compose(_p, _q, _s); markMesh.setMatrixAt(n, _m4);
+      n++;
+    }
+  }
+  lineMesh.count = glowMesh.count = markMesh.count = n; coneMesh.count = n*2;
+  [lineMesh, glowMesh, coneMesh, markMesh].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+  regionBox.visible = d > 0;
+  nThread = thread; nTotal = n;
+}
+
+// ---------- the loop on its pivot ----------
+const loopG = new THREE.Group(); loopG.position.y = H; lab.add(loopG);
+const copper = new THREE.MeshStandardMaterial({ color:0xf09a58, emissive:0x5a2a08, emissiveIntensity:.8, metalness:.9, roughness:.3 });
+const steel = new THREE.MeshStandardMaterial({ color:0xb9c4e6, metalness:1, roughness:.25 });
+const fill = new THREE.Mesh(new THREE.PlaneGeometry(1,1), new THREE.MeshStandardMaterial({ color:0x8fb8ff, transparent:true, opacity:.30, side:THREE.DoubleSide, roughness:.1, depthWrite:false }));
+fill.renderOrder = 6; loopG.add(fill);
+const barGeo = new THREE.CylinderGeometry(0.0052,0.0052,1,12), cornerGeo = new THREE.SphereGeometry(0.0066,12,8);
+const bars = [0,1,2,3].map(() => { const m = new THREE.Mesh(barGeo, copper); m.castShadow = true; loopG.add(m); return m; });
+const corners = [0,1,2,3].map(() => { const m = new THREE.Mesh(cornerGeo, copper); loopG.add(m); return m; });
+const arrN = arrow(COL.V, 'n', 0.0030, 0.055); arrN.setLen(0.115); arrN.point(new THREE.Vector3(0,0,1)); loopG.add(arrN);
+const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.0046,0.0046,1,16), steel); axle.castShadow = true; lab.add(axle);
+const axleCap = new THREE.Mesh(new THREE.SphereGeometry(0.0085,16,12), glowMat(COL.gold,.5)); lab.add(axleCap);
+let layoutKey = '';
+function layoutLoop(){
+  const key = S.A.toFixed(5); if (key === layoutKey) return; layoutKey = key;
+  const { w, h } = loopDims(S.A);
+  bars[0].rotation.z = bars[1].rotation.z = Math.PI/2; bars[0].scale.y = bars[1].scale.y = w; bars[0].position.set(0, h/2, 0); bars[1].position.set(0, -h/2, 0);
+  bars[2].scale.y = bars[3].scale.y = h; bars[2].position.set(-w/2, 0, 0); bars[3].position.set(w/2, 0, 0);
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b], k) => corners[k].position.set(a*w/2, b*h/2, 0));
+  fill.scale.set(w, h, 1);
+  const top = H + h/2 + 0.026;
+  axle.scale.y = top - BASE_TOP; axle.position.y = BASE_TOP + (top - BASE_TOP)/2;
+  axleCap.position.y = top;
+}
+
+// angle arc (in the horizontal plane through the pivot) between B and the normal n, with its label
+const arcMat = new THREE.MeshBasicMaterial({ color:COL.V, toneMapped:false });
+let arc = null, arcKey = -1;
+const thLab = liveLabel('θ = 35°', COL.V, 0.1); lab.add(thLab.s);
+function updateArc(){
+  const k = Math.round(S.th*4); if (k === arcKey) return; arcKey = k;
+  if (arc){ lab.remove(arc); arc.geometry.dispose(); arc = null; }
+  const th = THREE.MathUtils.degToRad(S.th), R = 0.085;
+  if (S.th > 1.5){
+    const pts = []; for (let i=0;i<=24;i++){ const a = th*i/24; pts.push(new THREE.Vector3(R*Math.cos(a), 0, R*Math.sin(a))); }
+    arc = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.0018, 6, false), arcMat); arc.position.y = H; lab.add(arc);
+  }
+  const mid = th/2, R2 = 0.16; thLab.s.position.set(R2*Math.cos(mid) + 0.012, H + 0.012, R2*Math.sin(mid));
+  thLab.set(`θ = ${Math.round(S.th)}°`);
+  thLab.s.visible = S.th > 1.5 || true;
+}
+
+// ---------- effective area: the gold shadow of the loop on a plane perpendicular to B ----------
+const screenGeo = new THREE.PlaneGeometry(2*RZ, 2*RY).rotateY(Math.PI/2);
+const screen = new THREE.Mesh(screenGeo, new THREE.MeshBasicMaterial({ color:COL.wbc, transparent:true, opacity:.10, side:THREE.DoubleSide, depthWrite:false, toneMapped:false }));
+screen.position.set(XS, H, 0); screen.renderOrder = 2; lab.add(screen);
+const screenEdge = new THREE.LineSegments(new THREE.EdgesGeometry(screenGeo), new THREE.LineBasicMaterial({ color:0x7aa2ff, transparent:true, opacity:.55 }));
+screenEdge.position.copy(screen.position); lab.add(screenEdge);
+const screenLab = liveLabel('plane ⟂ B', 0x7aa2ff, 0.1); screenLab.s.position.set(XS, H - RY - 0.028, 0); lab.add(screenLab.s);
+const unitYZ = new THREE.PlaneGeometry(1,1).rotateY(Math.PI/2);
+const shadow = new THREE.Mesh(unitYZ, new THREE.MeshBasicMaterial({ color:COL.gold, transparent:true, opacity:.6, side:THREE.DoubleSide, depthWrite:false, toneMapped:false }));
+shadow.position.set(XS+0.0006, H, 0); shadow.renderOrder = 7; lab.add(shadow);
+const shadowEdge = new THREE.LineSegments(new THREE.EdgesGeometry(unitYZ), new THREE.LineBasicMaterial({ color:0xffe08a })); shadowEdge.position.copy(shadow.position); shadowEdge.renderOrder = 8; lab.add(shadowEdge);
+const ghost = new THREE.LineSegments(new THREE.EdgesGeometry(unitYZ), new THREE.LineBasicMaterial({ color:COL.gold, transparent:true, opacity:.45 })); ghost.position.set(XS-0.0006, H, 0); lab.add(ghost);
+const guideGeo = new THREE.BufferGeometry(); guideGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(24), 3));
+const guides = new THREE.LineSegments(guideGeo, new THREE.LineBasicMaterial({ color:COL.gold, transparent:true, opacity:.42 })); guides.frustumCulled = false; lab.add(guides);
+const shLab = liveLabel('A cos θ = 0.025 m²', COL.gold, 0.17); lab.add(shLab.s);
+function updateShadow(){
+  const th = THREE.MathUtils.degToRad(S.th), cT = Math.cos(th), sT = Math.sin(th), { w, h } = loopDims(S.A);
+  const on = S.shadow;
+  [shadow, shadowEdge, ghost, guides, shLab.s, screen, screenEdge, screenLab.s].forEach(o => o.visible = on);
+  const zw = Math.max(w*cT, 0.0004);
+  shadow.scale.set(1, h, zw); shadowEdge.scale.copy(shadow.scale); ghost.scale.set(1, h, w);
+  shadow.material.opacity = cT < 0.02 ? 0.0 : 0.6; shadowEdge.visible = on && cT >= 0.02;
+  const pos = guideGeo.attributes.position;
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b], k) => {
+    const x0 = a*w/2*sT, z0 = -a*w/2*cT, y0 = H + b*h/2;
+    pos.setXYZ(k*2, x0, y0, z0); pos.setXYZ(k*2+1, XS, y0, z0);
+  });
+  pos.needsUpdate = true;
+  shLab.s.position.set(XS, H + h/2 + 0.032, 0);
+  shLab.set(`A cos θ = ${(S.A*cT).toFixed(3)} m²`);
+}
+
+// ---------- readout (panel + a board in the 3D scene so it shows in AR too) ----------
+const rdCanvas = document.createElement('canvas'); rdCanvas.width = 640; rdCanvas.height = 320;
+const rdTex = new THREE.CanvasTexture(rdCanvas); rdTex.colorSpace = THREE.SRGBColorSpace;
+const rdBoard = new THREE.Sprite(new THREE.SpriteMaterial({ map:rdTex, depthTest:false, transparent:true }));
+rdBoard.renderOrder = 18; rdBoard.scale.set(0.2, 0.1, 1); rdBoard.position.set(0.23, 0.47, 0); lab.add(rdBoard);
+let rdLast = '';
+function drawReadout(){
+  const cT = Math.cos(THREE.MathUtils.degToRad(S.th));
+  const sig = [S.B.toFixed(2), S.A.toFixed(3), Math.round(S.th), flux().toFixed(4), nThread].join('|'); if (sig === rdLast) return; rdLast = sig;
+  const g = rdCanvas.getContext('2d'); g.clearRect(0,0,640,320);
+  g.beginPath(); g.roundRect(8,8,624,304,40); g.fillStyle = 'rgba(6,10,25,.86)'; g.fill(); g.strokeStyle = hexStr(COL.gold); g.lineWidth = 6; g.stroke();
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.font = '600 44px "Chakra Petch", sans-serif';
+  g.fillStyle = hexStr(COL.B); g.fillText(`B = ${S.B.toFixed(2)} T`, 40, 62);
+  g.fillStyle = '#e9eeff'; g.fillText(`A = ${S.A.toFixed(3)} m²`, 330, 62);
+  g.fillStyle = hexStr(COL.V); g.fillText(`θ = ${Math.round(S.th)}°`, 40, 126);
+  g.fillStyle = '#98a5cc'; g.fillText(`cos θ = ${cT.toFixed(2)}`, 330, 126);
+  g.fillStyle = hexStr(COL.gold); g.font = '700 84px "Chakra Petch", sans-serif'; g.fillText(`Φ = ${flux().toFixed(4)} Wb`, 40, 208);
+  g.fillStyle = '#7fe3ff'; g.font = '600 38px "Chakra Petch", sans-serif'; g.fillText(`lines through the loop: ${nThread}`, 40, 276);
+  rdTex.needsUpdate = true;
+}
+const fmt = { B:v => v.toFixed(2)+' T', A:v => v.toFixed(3)+' m²', T:v => Math.round(v)+'°', P:v => v.toFixed(4)+' Wb' };
+const lastTxt = {};
+function setTxt(id, txt){ if (lastTxt[id] === txt) return; lastTxt[id] = txt; $(id).textContent = txt; }
+function setVal(id, v){ const el = $(id); if (document.activeElement !== el && +el.value !== v) el.value = v; }
+function readout(){
+  const cT = Math.cos(THREE.MathUtils.degToRad(S.th)), phi = flux();
+  setTxt('sub', `${S.B.toFixed(2)} T × ${S.A.toFixed(3)} m² × cos ${Math.round(S.th)}°  (cos = ${cT.toFixed(2)})`);
+  setTxt('phival', `Φ = ${fmt.P(phi)}`);
+  setTxt('pdir', S.B <= 0 ? 'B = 0: there is no field, so there is no flux.' : cT < 0.0175 ? 'Edge-on: no field line passes through the loop, so Φ = 0.' : `Check: Φ ÷ (A cos θ) = ${(phi/(S.A*cT)).toFixed(2)} T = ${(phi/(S.A*cT)).toFixed(2)} Wb/m²`);
+  setTxt('rB', fmt.B(S.B)); setTxt('rA', fmt.A(S.A)); setTxt('rT', fmt.T(S.th)); setTxt('rP', fmt.P(phi));
+  setTxt('rL', nTotal ? `${nThread}  of  ${nTotal} lines` : '0 (no field)');
+  setTxt('oB', fmt.B(S.B)); setTxt('oA', fmt.A(S.A)); setTxt('oT', fmt.T(S.th));
+  setVal('sB', S.B); setVal('sA', S.A); setVal('sT', Math.round(S.th));
+  [['cSpin',S.spin],['dSpin',S.spin],['cShadow',S.shadow]].forEach(([id,v]) => { if ($(id).getAttribute('aria-pressed') !== String(v)) $(id).setAttribute('aria-pressed', v); });
+}
+
+// ---------- floating caption board = the presenter's speech bubble ----------
+const boardCanvas = document.createElement('canvas'); boardCanvas.width = 1024; boardCanvas.height = 360;
+const boardTex = new THREE.CanvasTexture(boardCanvas); boardTex.colorSpace = THREE.SRGBColorSpace;
+const board = new THREE.Sprite(new THREE.SpriteMaterial({ map:boardTex, depthTest:false, transparent:true }));
+board.renderOrder = 20; board.position.set(-0.14, 0.50, 0); lab.add(board);
+let BW = 0.34; board.scale.set(BW, BW*360/1024, 1);
+let stepCaption = ['', '', COL.gold], flashTimer = null;
+function drawBoard(title, line, color){
+  const g = boardCanvas.getContext('2d'), hex = hexStr(color);
+  g.clearRect(0,0,1024,360);
+  g.beginPath(); g.roundRect(8,8,1008,284,46);
+  
+  g.fillStyle = 'rgba(6,10,25,.88)'; g.fill();
+  g.strokeStyle = hex; g.lineWidth = 6; g.stroke();
+  
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  let fs = 92; g.font = `700 ${fs}px "Chakra Petch", sans-serif`;
+  while (g.measureText(title).width > 940 && fs > 40){ fs -= 4; g.font = `700 ${fs}px "Chakra Petch", sans-serif`; }
+  g.fillStyle = hex; g.fillText(title, 512, 112);
+  let fl = 54; g.font = `500 ${fl}px "IBM Plex Sans", sans-serif`;
+  while (g.measureText(line).width > 940 && fl > 28){ fl -= 2; g.font = `500 ${fl}px "IBM Plex Sans", sans-serif`; }
+  g.fillStyle = '#e9eeff'; g.fillText(line, 512, 214);
+  boardTex.needsUpdate = true;
+  tween(380, t => { const e = easeBack(t); board.scale.set(BW*e, BW*360/1024*e, 1); });
+}
+function setCaption(title, line, color = COL.gold){ stepCaption = [title, line, color]; clearTimeout(flashTimer); drawBoard(title, line, color); }
+function flash(title, line, color = COL.gold){
+  drawBoard(title, line, color); clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => drawBoard(...stepCaption), 2800);
+}
+board.visible = false;
+
+// ---------- the presenter: round pop-out photo badge beside the lab — his face stays completely still; the speech bubble comes from him ----------
+const hostImg = new Image(); hostImg.src = window.WB_HOST;
+await hostImg.decode().catch(()=>{});
+const IW = hostImg.naturalWidth || 585, IH = hostImg.naturalHeight || 678;
+const hostTex = new THREE.Texture(hostImg); hostTex.colorSpace = THREE.SRGBColorSpace; hostTex.needsUpdate = true;
+const host = new THREE.Sprite(new THREE.SpriteMaterial({ map:hostTex, transparent:true, depthWrite:false }));
+const IS_W = 0.22, IS_H = IS_W*IH/IW, IS_Y = 0.30;
+host.scale.set(IS_W, IS_H, 1); host.position.set(-0.40, IS_Y, 0.05); host.renderOrder = 15; lab.add(host); host.visible = false;
+function updateHost(now){ host.position.y = IS_Y + Math.sin(now/1000*1.6)*0.004; }   // the whole badge floats gently; nothing on the face moves
+
+// ---------- intro logo ----------
+const logo = new THREE.Group(); world.add(logo);
+{
+  const gold = new THREE.MeshStandardMaterial({ color:COL.gold, emissive:COL.gold, emissiveIntensity:.5, metalness:.8, roughness:.25 });
+  [-25, 25].forEach(a => { const o = new THREE.Mesh(new THREE.TorusGeometry(0.11,0.0055,12,80), gold); o.scale.y = 0.38; o.rotation.z = THREE.MathUtils.degToRad(a); logo.add(o); });
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.03,24,16), glowMat(COL.wbc,.9)); logo.add(core);
+  const el = new THREE.Mesh(new THREE.SphereGeometry(0.0135,16,12), glowMat(COL.B,1.3)); el.position.set(0.1,0.07,0); logo.add(el);
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const g = c.getContext('2d');
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#e9eeff'; g.font = '700 118px "Chakra Petch", sans-serif'; g.fillText('Webitoo Lab', 512, 100);
+  g.fillStyle = '#ffc83d'; g.font = '500 54px "IBM Plex Sans", sans-serif'; g.fillText('the presenter', 512, 200);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:t, transparent:true, depthTest:false })); sp.scale.set(0.34,0.085,1); sp.position.y = -0.19; sp.renderOrder = 30; logo.add(sp);
+}
+
+// ---------- AR reticle ----------
+const reticle = new THREE.Mesh(new THREE.RingGeometry(0.08,0.1,48).rotateX(-Math.PI/2), new THREE.MeshBasicMaterial({ color:COL.gold }));
+reticle.matrixAutoUpdate = false; reticle.visible = false; scene.add(reticle);
+
+// ---------- tour ----------
+let rampTok = 0, stepTimer = null, spinTw = null; const rampTws = [];
+function stopSpin(){ if (spinTw){ cancelTween(spinTw); spinTw = null; } S.spin = false; }
+function stopAll(){ rampTok++; rampTws.forEach(cancelTween); rampTws.length = 0; clearTimeout(stepTimer); stopSpin(); }
+function ramp(key, to, dur, done){
+  const from = S[key], tok = rampTok;
+  const tw = tween(dur, t => { if (tok === rampTok) S[key] = from + (to-from)*easeInOut(t); }, () => { if (tok === rampTok) done && done(); });
+  rampTws.push(tw); return tw;
+}
+function spinIt(){
+  if (S.spin){ stopSpin(); return; }
+  stopAll(); S.spin = true; sfx('turn');
+  const sweep = () => { spinTw = tween(8000, t => { S.th = 45*(1 - Math.cos(2*Math.PI*t)); }, () => { S.th = 0; S.spin = false; spinTw = null; }); };
+  if (S.th > 0.5){ const from = S.th; spinTw = tween(450 + from*7, t => { S.th = from*(1 - easeInOut(t)); }, sweep); } else sweep();
+}
+function base(o){ Object.assign(S, { B:0.30, A:0.030, th:35, shadow:true }, o); }
+const steps = [
+  { c:['Webitoo Lab','Magnetic flux'], t:'Welcome to Webitoo Lab', x:'An interactive 3D lab: discover magnetic flux — how much magnetic field passes through a surface.', go(){ base({ shadow:false, th:35 }); } },
+  { c:['Magnetic flux Φ','Field lines passing through a surface'], t:'What is magnetic flux?', x:'The <span class="k-b">uniform magnetic field B</span> is drawn as parallel field lines. A flat loop stands in it, and the lines that pass <b>through</b> the loop light up bright. <span class="k-g">Magnetic flux Φ</span> measures how much field goes through a surface: <b>more lines through it → more flux</b>. Watch the counter as the loop turns!', go(){ base({ shadow:false, th:70 }); stepTimer = setTimeout(() => ramp('th', 15, 4500), 700); } },
+  { c:['Φ = B A cos θ','Field × area × cos of the angle'], t:'The formula', x:'<span class="k-g">Φ = B A cos θ</span>, measured in <b>weber (Wb)</b>. <span class="k-b">B</span> is the field, <b>A</b> the area of the loop, and <span class="k-v">θ</span> the angle between <span class="k-b">B</span> and the <span class="k-v">normal n</span> — the line perpendicular to the loop. The <span class="k-g">gold shadow</span> is the loop projected on a plane ⟂ B: its area is <b>A cos θ</b>.', go(){ base({ shadow:true, th:10 }); stepTimer = setTimeout(() => ramp('th', 65, 5200), 600); } },
+  { c:['θ = 0° → maximum flux','Every line passes through'], t:'Loop facing the field', x:'Turn the loop to face the field: the normal <span class="k-v">n</span> points along <span class="k-b">B</span>, so <b>θ = 0°</b> and cos θ = 1. The gold shadow is as big as the loop and every line that meets the loop goes through it: <span class="k-g">Φ = B A</span> — the <b>maximum flux</b>.', go(){ base({ shadow:true, th:55 }); stepTimer = setTimeout(() => ramp('th', 0, 3600, () => { sfx('on'); flash('Maximum flux!', `Φ = B A = ${(S.B*S.A).toFixed(4)} Wb`, COL.gold); }), 500); } },
+  { c:['θ = 90° → zero flux','No line passes through'], t:'Loop edge-on to the field', x:'Now turn the loop edge-on: <b>θ = 90°</b> and cos θ = 0. The gold shadow shrinks to a thin line and <b>no field line passes through</b> the loop: <span class="k-g">Φ = 0</span> — even though the field is still there!', go(){ base({ shadow:true, th:0 }); stepTimer = setTimeout(() => ramp('th', 90, 5000, () => { sfx('off'); flash('Zero flux', 'Φ = B A cos 90° = 0 Wb', COL.V); }), 700); } },
+  { c:['Bigger A or B → more flux','Φ ∝ A and Φ ∝ B'], t:'Bigger area, stronger field', x:'A <span class="k-g">bigger loop</span> catches more lines: double A → double Φ. A <span class="k-b">stronger field</span> packs more lines into every square metre: double B → double Φ. Watch the counter climb!', go(){ base({ shadow:true, th:0, A:0.010, B:0.15 }); $('ctrlBox').open = true; const tok = rampTok; flash('Bigger area', 'More lines through → more flux', COL.gold); ramp('A', 0.050, 4200, () => { flash('Stronger field', 'More lines per m² → more flux', COL.B); ramp('B', 0.50, 4200); }); } },
+  { c:['B = Φ / A','1 tesla = 1 weber per m²'], t:'Flux density and units', x:'Face the loop to the field and <span class="k-g">B = Φ / A</span>: the field is the <b>flux density</b> — flux per square metre. Flux is measured in <b>weber (Wb)</b>, and <span class="k-b">1 tesla = 1 Wb/m²</span> (so 1 Wb = 1 T·m²).', go(){ base({ shadow:true, th:0, B:0.40, A:0.030 }); } },
+  { c:['Well done! 🎉','Keep exploring with Webitoo Lab'], t:'Well done!', x:'', go(){ base({ shadow:true, th:30, B:0.30, A:0.030 }); burst(); sfx('correct'); } },
+];
+let step = 0;
+function outroText(){ return `You now know magnetic flux! <span class="k-g">Φ = B A cos θ</span> in weber: most flux when the loop <b>faces</b> the field (θ = 0°), none when it is <b>edge-on</b> (θ = 90°), more with a bigger <b>A</b> or a stronger <span class="k-b">B</span>. And <span class="k-b">B = Φ / A</span>, so <span class="k-b">1 T = 1 Wb/m²</span>. Try the free controls! Keep exploring with <span class="k-g">Webitoo Lab</span>!`; }
+function showStep(n){
+  step = Math.max(0, Math.min(steps.length-1, n));
+  const s = steps[step];
+  stopAll(); flash.t = 0;
+  s.go();
+  $('stepNum').textContent = step===0 ? 'Intro' : `Step ${step} of ${steps.length-1}`;
+  $('stepTitle').textContent = s.t;
+  $('stepText').innerHTML = step === steps.length-1 ? outroText() : s.x;
+  $('btnPrev').disabled = step === 0;
+  $('btnNext').textContent = step===0 ? 'Start the experiment' : step===steps.length-1 ? 'Restart' : 'Next';
+  $('arNext').textContent = step===steps.length-1 ? 'Restart ↺' : 'Next ›';
+  setCaption(...s.c, COL.gold);
+  if (step === steps.length-1) $('ctrlBox').open = true;
+  readout();
+}
+let introDone = false;
+$('btnNext').onclick = () => {
+  if (!introDone){ endIntro(); return; }
+  if (step === steps.length-1){ showStep(1); return; }
+  showStep(step+1);
+};
+$('btnPrev').onclick = () => showStep(step-1);
+
+// ---------- celebration particles ----------
+const sparks = [];
+function burst(){
+  for (let k=0;k<44;k++){
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.004,6,4), glowMat(k%2?COL.gold:COL.B, 1.5));
+    m.position.set(0,H+0.05,0); m.userData.v = new THREE.Vector3((Math.random()-.5)*.6, Math.random()*.7+.2, (Math.random()-.5)*.6); m.userData.life = 1;
+    lab.add(m); sparks.push(m);
+  }
+}
+
+// ---------- controls ----------
+function setPanel(open){ panelOpen = open; $('panel').hidden = !open; $('dock').hidden = open; resize(); (open ? $('btnHide') : $('dShow')).focus({preventScroll:true}); }
+$('btnHide').onclick = () => setPanel(false);
+$('dShow').onclick = () => setPanel(true);
+$('cSpin').onclick = $('dSpin').onclick = () => spinIt();
+$('cShadow').onclick = () => { S.shadow = !S.shadow; sfx('zap'); };
+$('cView').onclick = homeView;
+$('cTop').onclick = topView;
+$('sB').oninput = e => { stopAll(); S.B = +e.target.value; };
+$('sA').oninput = e => { stopAll(); S.A = +e.target.value; };
+$('sT').oninput = e => { stopAll(); S.th = +e.target.value; };
+let lastB = S.B, lastA = S.A;
+$('sB').onchange = () => { if (S.B === lastB) return; flash(S.B > lastB ? 'Stronger field ⚡' : 'Weaker field', S.B > 0 ? `B = ${S.B.toFixed(2)} T → Φ = ${flux().toFixed(4)} Wb` : 'B = 0: no field, no flux', COL.B); sfx('zap'); lastB = S.B; };
+$('sA').onchange = () => { if (S.A === lastA) return; flash(S.A > lastA ? 'Bigger loop' : 'Smaller loop', `A = ${S.A.toFixed(3)} m² → Φ = ${flux().toFixed(4)} Wb`, COL.gold); sfx('turn'); lastA = S.A; };
+$('sT').onchange = () => { const c = Math.cos(THREE.MathUtils.degToRad(S.th)); flash(`θ = ${Math.round(S.th)}°`, S.th < 1 ? 'Facing the field: maximum flux' : S.th > 89 ? 'Edge-on: zero flux' : `cos θ = ${c.toFixed(2)} → Φ = ${flux().toFixed(4)} Wb`, COL.V); };
+
+// ---------- electric sound theme (synthesized, no voice) ----------
+let soundOn = true, actx = null, master = null, humGain = null, noiseBuf = null, nextCrackle = 0;
+function audioStart(){
+  if (actx){ actx.resume?.(); return; }
+  try{
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = soundOn ? 0.55 : 0; master.connect(actx.destination);
+    const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.Q.value = 2;
+    humGain = actx.createGain(); humGain.gain.value = 0;
+    [[50,'sine',.9],[100,'sawtooth',.25],[150,'square',.06],[200,'sawtooth',.05]].forEach(([f,type,v]) => {
+      const o = actx.createOscillator(), g = actx.createGain(); o.type = type; o.frequency.value = f; g.gain.value = v; o.connect(g).connect(lp); o.start();
+    });
+    const lfo = actx.createOscillator(), lfoG = actx.createGain(); lfo.frequency.value = 0.35; lfoG.gain.value = 60; lfo.connect(lfoG).connect(lp.frequency); lfo.start();
+    lp.connect(humGain).connect(master);
+    noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let k=0;k<d.length;k++) d[k] = Math.random()*2-1;
+  }catch(e){ actx = null; }
+}
+function noise(dur, freq, q, vol, when=0){
+  const t = actx.currentTime + when, src = actx.createBufferSource(), bp = actx.createBiquadFilter(), g = actx.createGain();
+  src.buffer = noiseBuf; src.playbackRate.value = 0.8 + Math.random()*0.6;
+  bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+0.004); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  src.connect(bp).connect(g).connect(master); src.start(t, Math.random()*0.5); src.stop(t+dur+0.02);
+}
+function tone(f0, f1, dur, type, vol, when=0){
+  const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t+dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+0.01); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t+dur+0.02);
+}
+function sfx(kind){
+  audioStart(); if (!actx || !soundOn) return;
+  if (kind === 'start'){ tone(60, 520, 1.1, 'sawtooth', .10); noise(.5, 3000, 3, .12, .55); noise(.25, 5200, 6, .1, .9); }
+  else if (kind === 'on'){ noise(.18, 2600, 5, .35); noise(.12, 4800, 8, .22, .06); tone(900, 70, .35, 'sawtooth', .08); }
+  else if (kind === 'off'){ tone(240, 40, .45, 'sawtooth', .08); noise(.08, 1800, 4, .15); }
+  else if (kind === 'zap'){ noise(.14, 3800, 7, .3); tone(1400, 120, .22, 'square', .05); }
+  else if (kind === 'turn'){ tone(110, 190, .9, 'triangle', .07); noise(.9, 700, 1.2, .07); noise(.1, 3200, 6, .12, .85); }
+  else if (kind === 'correct'){ [523,659,784,1047].forEach((f,k) => tone(f, f*1.01, .22, 'square', .045, k*.07)); noise(.2, 5000, 8, .12, .28); }
+}
+function audioTick(){
+  if (!actx || !humGain) return;
+  const t = actx.currentTime, lvl = S.B/B_MAX;
+  humGain.gain.setTargetAtTime(!soundOn ? 0 : (S.B > 0 ? 0.03 + 0.09*lvl : 0.012), t, 0.15);
+  if (soundOn && S.B > 0 && t > nextCrackle){ noise(0.02 + Math.random()*0.05, 2500 + Math.random()*4000, 6, 0.03 + lvl*0.05); nextCrackle = t + 0.15 + Math.random()*(1.1 - lvl*0.8); }
+}
+$('btnSound').onclick = () => {
+  soundOn = !soundOn; audioStart();
+  if (master) master.gain.setTargetAtTime(soundOn ? 0.55 : 0, actx.currentTime, 0.05);
+  $('btnSound').setAttribute('aria-pressed', soundOn); $('btnSound').textContent = soundOn ? 'Sound on' : 'Sound off';
+  if (soundOn) sfx('zap');
+};
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.style.opacity = 1; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.opacity = 0, 3500); }
+
+// ---------- intro ----------
+
+// ---------- Webitoo Lab branding: hide the original marks, put WEBITOO LAB on the base and the Webitoo logo in the intro ----------
+await Promise.race([document.fonts.load('700 120px "Poppins"','webitoo LAB'), new Promise(r=>setTimeout(r,2500))]).catch(()=>{});
+{
+  const HIDE = [];
+  const hidden = [];
+  world.updateMatrixWorld(true);
+  world.traverse(o => {
+    if (!o.name) return;
+    for (const h of HIDE){
+      if (h.startsWith('#')){                     // '#<material>#<parent>#<x>': cut away only the triangles left of x (local)
+        const [, mat, parent, xs] = h.split('#');
+        if (o.isMesh && o.material && o.material.name === mat && o.parent && o.parent.name === parent && !o.userData.wbCut){
+          o.userData.wbCut = true; const X = +xs, gm = o.geometry, idx = gm.index, P = gm.attributes.position, keep = [];
+          for (let t = 0; t < idx.count; t += 3){ const a = idx.getX(t), b = idx.getX(t+1), c = idx.getX(t+2);
+            if ((P.getX(a) + P.getX(b) + P.getX(c))/3 >= X) keep.push(a, b, c); }
+          o.geometry = gm.clone(); o.geometry.setIndex(keep);
+        }
+        continue;
+      }
+      if (h.startsWith('@')){                     // '@<material>@<parent node>': hide only that material's piece
+        const [, mat, parent] = h.split('@');
+        if (o.isMesh && o.material && o.material.name === mat && (o.name === parent || (o.parent && o.parent.name === parent))) hidden.push(o);
+      } else if (o.name === h) hidden.push(o);
+    }
+  });
+  const _v = new THREE.Vector3(); let rs = [], ys = [];
+  for (const o of hidden){
+    o.traverse(m => {
+      if (!m.isMesh || !(/BaseLabel|BaseText|BaseGlow/.test(o.name) || (o.parent && /BaseGlow/.test(o.parent.name)))) return;
+      const p = m.geometry.attributes.position;
+      for (let i = 0; i < p.count; i += 3){ _v.fromBufferAttribute(p, i); m.localToWorld(_v); lab.worldToLocal(_v); rs.push(Math.hypot(_v.x, _v.z)); ys.push(_v.y); }
+    });
+    o.visible = false;
+  }
+  if (rs.length) wbBaseText(rs, ys);
+  // intro logo: keep the spin-in animation, swap the contents for the Webitoo mark
+  logo.children.forEach(c => c.visible = false);
+  if (logo.isMesh) logo.material = new THREE.MeshBasicMaterial({ visible:false });
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 640; const g = c.getContext('2d');
+  const grad = g.createLinearGradient(262, 0, 762, 0); grad.addColorStop(0, '#17ABF6'); grad.addColorStop(.5, '#3157FE'); grad.addColorStop(1, '#7634F7');
+  g.save(); g.translate(512 - 220*1.25, 20); g.scale(2.5, 2.5);
+  g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = grad; g.shadowColor = 'rgba(49,87,254,.8)'; g.shadowBlur = 10;
+  g.lineWidth = 15; g.stroke(new Path2D('M70 130 L56 130 C32 130 18 114 18 98 C18 81 32 67 51 67 C55 41 79 22 108 22 C138 22 160 42 164 68 C187 70 202 86 202 104 C202 119 191 130 170 130 L156 130')); g.lineWidth = 16; g.stroke(new Path2D('M80 80 L96 120 L112 92 L128 120 L144 80'));
+  g.restore();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '700 150px "Poppins", sans-serif'; g.fillStyle = '#ffffff'; g.fillText('webitoo', 512, 470);
+  g.font = '600 54px "Poppins", sans-serif'; g.fillStyle = '#7fd3ff'; g.fillText('L  A  B', 512, 585);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map:t, transparent:true, depthTest:false, toneMapped:false }));
+  sp.renderOrder = 30; sp.name = 'WB_Logo'; logo.parent.add(sp);
+  // follow the original logo's spin-in / shrink-out animation (scale + visibility)
+  const sync = () => { sp.visible = logo.visible && logo.scale.x > 0.001; sp.position.copy(logo.position); sp.scale.set(0.34*logo.scale.x/0.9, 0.2125*logo.scale.x/0.9, 1); if (logo.visible) requestAnimationFrame(sync); else sp.visible = false; };
+  sync();
+}
+function wbBaseText(rs, ys){
+  rs.sort((a,b)=>a-b); const r0 = rs[Math.floor(rs.length*0.05)], r1 = rs[Math.floor(rs.length*0.95)];
+  const r = (r0 + r1)/2, hgt = Math.max(r1 - r0, 0.016)*1.05, y = Math.max(...ys) + 0.0006;
+  const R = r + hgt*1.2, N = 2048, px = N/(2*R);
+  const c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d');
+  const txt = 'WEBITOO LAB', fs = Math.round(hgt*px*1.32);
+  g.font = `700 ${fs}px "Poppins", sans-serif`; g.textBaseline = 'middle'; g.textAlign = 'center';
+  const sp = fs*0.32, ws = [...txt].map(ch => g.measureText(ch).width + sp);
+  const tot = ws.reduce((a,b)=>a+b, 0) - sp, rp = r*px; let a = -tot/2/rp;
+  const grad = g.createLinearGradient(N/2 - rp*Math.sin(tot/2/rp), 0, N/2 + rp*Math.sin(tot/2/rp), 0);
+  grad.addColorStop(0, '#4cc6ff'); grad.addColorStop(.5, '#6f8dff'); grad.addColorStop(1, '#a678ff');
+  g.fillStyle = grad; g.shadowColor = 'rgba(80,120,255,.95)'; g.shadowBlur = fs*0.18;
+  [...txt].forEach((ch, i) => {
+    const mid = a + (ws[i] - sp)/2/rp;
+    g.save(); g.translate(N/2 + rp*Math.sin(mid), N/2 + rp*Math.cos(mid)); g.rotate(-mid); g.fillText(ch, 0, 0); g.restore();
+    a += ws[i]/rp;
+  });
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2*R, 2*R), new THREE.MeshStandardMaterial({ map:tex, emissiveMap:tex, emissive:0xffffff, emissiveIntensity:0.95,
+    transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, roughness:.6, metalness:0, toneMapped:false, name:'WB_BaseText' }));
+  m.name = 'WB_BaseText'; m.rotation.x = -Math.PI/2; m.position.y = y; m.renderOrder = 2; lab.add(m);
+}
+
+lab.scale.setScalar(0.0001); logo.position.set(0,0.26,0); logo.scale.setScalar(0.0001);
+setTimeout(() => endIntro(), 2800);
+tween(1600, t => { const e = easeBack(t); logo.scale.setScalar(Math.max(e,0.0001)*0.9); logo.rotation.y = -Math.PI*(1-easeOut(t)); });
+function endIntro(){
+  if (introDone) return;
+  introDone = true; audioStart(); sfx('start');
+  tween(600, t => logo.scale.setScalar(Math.max(0.9*(1-easeOut(t)),0.0001)), () => logo.visible = false);
+  tween(900, t => lab.scale.setScalar(Math.max(easeBack(t),0.0001)));
+  showStep(1);
+  board.visible = true;
+}
+// ---------- camera mode ----------
+let stream = null;
+$('btnCam').onclick = async () => {
+  if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; $('cam').hidden = true; $('btnCam').setAttribute('aria-pressed', false); return; }
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+    $('cam').srcObject = stream; $('cam').hidden = false; await $('cam').play();
+    $('btnCam').setAttribute('aria-pressed', true);
+    toast('Camera mode: the lab floats over your camera view.');
+  }catch(e){ stream = null; toast('The camera is not available here. Open the hosted https link on your phone.'); }
+};
+
+// ---------- "Place anywhere": WebXR (ARCore Android) · AR Quick Look (iPhone) · gyroscope camera view (other phones) ----------
+let hitSource = null, placed = false;
+const quickLook = (() => { try { return document.createElement('a').relList.supports('ar'); } catch(e){ return false; } })();
+let webxrAR = false;
+if (navigator.xr && navigator.xr.isSessionSupported){
+  navigator.xr.isSessionSupported('immersive-ar').then(ok => { if (ok){ webxrAR = true; $('btnAny').hidden = false; } }).catch(()=>{});
+}
+if (quickLook) $('btnAny').hidden = false;
+const canCam = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+if (canCam && matchMedia('(pointer:coarse)').matches) $('btnAny').hidden = false;
+
+let fakeAR = false, ori = null, yaw0 = null, gotOri = false;
+const _e = new THREE.Euler(), _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion(-Math.sqrt(0.5),0,0,Math.sqrt(0.5)), _z = new THREE.Vector3(0,0,1), _yaw = new THREE.Quaternion();
+function onOri(e){ if (e.alpha == null) return; ori = e; gotOri = true; }
+async function startFakeAR(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+    $('cam').srcObject = stream; $('cam').hidden = false; await $('cam').play();
+  }catch(e){ toast('Allow the camera to see the lab on your table.'); return; }
+  try{ if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); }catch(e){}
+  addEventListener('deviceorientation', onOri);
+  fakeAR = true; yaw0 = null; gotOri = false;
+  $('stage').style.background = 'transparent'; $('btnAny').textContent = 'Exit'; $('btnCam').hidden = true;
+  controls.enabled = false; camera.clearViewOffset(); camera.updateProjectionMatrix();
+  world.position.set(0, 0, -1.0); world.rotation.y = 0.5; shadowCatcher.material.opacity = .25;
+  camera.position.set(0, 0.5, 0); camera.lookAt(0, 0.25, -1.0);
+  enterARUI(); sfx('on');
+  toast('Point your phone at the table and look around the lab');
+  setTimeout(() => { if (fakeAR && !gotOri) toast('No motion sensor found: drag with your finger to look around'); if (fakeAR && !gotOri){ controls.enabled = true; controls.target.set(0,0.25,-1.0); } }, 2500);
+}
+function stopFakeAR(){
+  exitARUI();
+  fakeAR = false; removeEventListener('deviceorientation', onOri);
+  if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+  $('cam').hidden = true; $('stage').style.background = ''; $('btnAny').textContent = 'View in AR'; $('btnCam').hidden = false;
+  world.position.set(0,0,0); world.rotation.set(0,0,0); controls.enabled = true; shadowCatcher.material.opacity = .35; resize(); homeView();
+}
+function fakeARCamera(){
+  if (!fakeAR || !gotOri || !ori) return;
+  const a = THREE.MathUtils.degToRad(ori.alpha), b = THREE.MathUtils.degToRad(ori.beta), g = THREE.MathUtils.degToRad(ori.gamma);
+  const o = THREE.MathUtils.degToRad((screen.orientation && screen.orientation.angle) || window.orientation || 0);
+  _e.set(b, a, -g, 'YXZ'); const q = new THREE.Quaternion().setFromEuler(_e);
+  q.multiply(_q1); q.multiply(_q0.setFromAxisAngle(_z, -o));
+  if (yaw0 === null){ const f = new THREE.Vector3(0,0,-1).applyQuaternion(q); yaw0 = Math.atan2(-f.x, -f.z); }
+  _yaw.setFromAxisAngle(new THREE.Vector3(0,1,0), -yaw0);
+  camera.quaternion.slerp(_yaw.multiply(q), 0.35);
+}
+$('panel').addEventListener('beforexrselect', e => e.preventDefault());
+$('mkHint').addEventListener('beforexrselect', e => e.preventDefault());
+document.querySelector('.hud').addEventListener('beforexrselect', e => e.preventDefault());
+$('dock').addEventListener('beforexrselect', e => e.preventDefault());
+$('btnAR').onclick = async () => {
+  try{ if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) DeviceOrientationEvent.requestPermission().catch(()=>{}); }catch(e){}
+  if (fakeAR) stopFakeAR();
+  if (renderer.xr.isPresenting) renderer.xr.getSession().end();
+  if (markerOn) { stopMarker(); return; }
+  await startMarker();
+};
+$('btnAny').onclick = async () => {
+  if (markerOn) stopMarker();
+  if (!webxrAR && quickLook){ sfx('on'); $('qlLink').click(); return; }
+  if (!webxrAR){ if (fakeAR) stopFakeAR(); else await startFakeAR(); return; }
+  if (renderer.xr.isPresenting){ renderer.xr.getSession().end(); return; }
+  try{
+    const session = await navigator.xr.requestSession('immersive-ar', { requiredFeatures:['hit-test'], optionalFeatures:['dom-overlay'], domOverlay:{ root:$('app') } });
+    renderer.xr.setReferenceSpaceType('local');
+    await renderer.xr.setSession(session);
+    $('stage').style.background = 'transparent'; $('btnAny').textContent = 'Exit'; $('arHint').hidden = false;
+    placed = false; world.visible = false; shadowCatcher.material.opacity = .25; enterARUI();
+    const viewer = await session.requestReferenceSpace('viewer');
+    hitSource = await session.requestHitTestSource({ space:viewer });
+    session.addEventListener('select', () => {
+      if (!reticle.visible) return;
+      world.position.setFromMatrixPosition(reticle.matrix);
+      const c = renderer.xr.getCamera().position;
+      world.rotation.y = Math.atan2(c.x - world.position.x, c.z - world.position.z);
+      world.visible = true; placed = true; reticle.visible = false; $('arHint').hidden = true; sfx('on');
+    });
+    session.addEventListener('end', () => {
+      exitARUI();
+      hitSource = null; world.position.set(0,0,0); world.rotation.set(0,0,0); world.visible = true; reticle.visible = false;
+      $('stage').style.background = ''; $('btnAny').textContent = 'View in AR'; $('arHint').hidden = true;
+    });
+  }catch(e){ toast('AR could not start on this device.'); }
+};
+
+// ---------- gyro "hold" for poster mode ----------
+let held = false, heldQ0 = null; const heldMat = new THREE.Matrix4(), _hq = new THREE.Quaternion(), _hm = new THREE.Matrix4();
+function deviceQuat(){
+  if (!ori) return new THREE.Quaternion();
+  const a = THREE.MathUtils.degToRad(ori.alpha||0), b = THREE.MathUtils.degToRad(ori.beta||0), g = THREE.MathUtils.degToRad(ori.gamma||0);
+  const o = THREE.MathUtils.degToRad((screen.orientation && screen.orientation.angle) || window.orientation || 0);
+  _e.set(b, a, -g, 'YXZ'); const q = new THREE.Quaternion().setFromEuler(_e);
+  q.multiply(_q1); q.multiply(_q0.setFromAxisAngle(_z, -o)); return q;
+}
+function holdUpdate(){
+  if (!held || !heldQ0) return;
+  _hq.copy(heldQ0).invert().multiply(deviceQuat()).invert();
+  world.matrix.copy(_hm.makeRotationFromQuaternion(_hq).multiply(heldMat));
+}
+
+// ---------- "Show on your table": lab locked onto the printed Webitoo Lab Magnetic Flux poster (all phones) ----------
+let markerOn = false, mind = null, mindAnchor = null, mindBusy = false;
+async function startMarker(){
+  if (mindBusy) return; mindBusy = true;
+  $('btnAR').textContent = 'Starting camera…';
+  try{
+    const { MindARThree } = await import('https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js');
+    const bin = atob(window.WB_MIND_B64), u8 = new Uint8Array(bin.length);
+    for (let k=0;k<bin.length;k++) u8[k] = bin.charCodeAt(k);
+    const src = URL.createObjectURL(new Blob([u8]));
+    $('mindbox').hidden = false; $('mindbox').innerHTML = '';
+    mind = new MindARThree({ container:$('mindbox'), imageTargetSrc:src, uiLoading:'no', uiScanning:'no', uiError:'no', filterMinCF:0.001, filterBeta:50, missTolerance:20, warmupTolerance:2 });
+    const mr = mind.renderer, ms = mind.scene;
+    mr.outputColorSpace = THREE.SRGBColorSpace; mr.toneMapping = THREE.ACESFilmicToneMapping; mr.toneMappingExposure = 1.05;
+    ms.environment = new THREE.PMREMGenerator(mr).fromScene(new RoomEnvironment(), 0.04).texture;
+    ms.add(new THREE.HemisphereLight(0xbfd2ff, 0x101830, 0.8));
+    const dl = new THREE.DirectionalLight(0xffffff, 1.4); dl.position.set(0.5, -0.6, 1.5); ms.add(dl);
+    mindAnchor = mind.addAnchor(0);
+    scene.remove(world); mindAnchor.group.add(world);
+    world.position.set(0, 0, 0); world.rotation.set(Math.PI/2, 0, 0); world.scale.setScalar(1.15);
+    host.position.x = -0.33;
+    shadowCatcher.visible = false;
+    BW = 0.26; board.position.set(-0.10, 0.50, 0); board.scale.set(BW, BW*360/1024, 1);
+    addEventListener('deviceorientation', onOri);
+    let firstFound = false; window.__wbAnchor = mindAnchor;
+    mindAnchor.onTargetFound = () => {
+      $('mkHint').hidden = true; $('mkLost').hidden = true;
+      if (held){ ms.remove(world); mindAnchor.group.add(world); world.matrixAutoUpdate = true; held = false; }
+      if (!firstFound){ firstFound = true; sfx('on'); }
+    };
+    mindAnchor.onTargetLost = () => {
+      if (!firstFound) return;
+      if (!gotOri){ $('mkHint').hidden = false; return; }
+      world.updateMatrixWorld(true);
+      heldMat.copy(world.matrixWorld); heldQ0 = deviceQuat();
+      mindAnchor.group.remove(world); ms.add(world); world.matrixAutoUpdate = false; world.matrix.copy(heldMat); world.visible = true;
+      held = true; $('mkLost').hidden = false;
+    };
+    await mind.start();
+    renderer.setAnimationLoop(null); renderer.domElement.style.visibility = 'hidden';
+    $('stage').style.background = '#000';
+    mr.setAnimationLoop((t) => { frameUpdate(t, null); holdUpdate(); mr.render(ms, mind.camera); });
+    markerOn = true; $('mkHint').hidden = false; $('btnAR').textContent = 'Exit table view';
+    enterARUI();
+  }catch(e){
+    console.error(e); stopMarker(true);
+    toast('The camera could not start. Allow camera access and try again.');
+  }
+  mindBusy = false;
+}
+function stopMarker(silent){
+  exitARUI();
+  if (held && mind){ mind.scene.remove(world); world.matrixAutoUpdate = true; held = false; }
+  removeEventListener('deviceorientation', onOri); $('mkLost').hidden = true;
+  BW = 0.34; board.position.set(-0.14, 0.50, 0); host.position.x = -0.40; board.scale.set(BW, BW*360/1024, 1);
+  try{ if (mind){ mind.renderer.setAnimationLoop(null); mind.stop(); } }catch(e){}
+  if (mindAnchor) mindAnchor.group.remove(world);
+  scene.add(world); world.position.set(0,0,0); world.rotation.set(0,0,0); world.scale.setScalar(1); shadowCatcher.visible = true;
+  $('mindbox').innerHTML = ''; $('mindbox').hidden = true; $('mkHint').hidden = true; $('stage').style.background = '';
+  renderer.domElement.style.visibility = ''; renderer.setAnimationLoop(loop);
+  mind = null; mindAnchor = null; markerOn = false; $('btnAR').textContent = 'Show on your table';
+  resize(); homeView();
+}
+
+// ---------- minimal UI while the lab is in the real world: only Next + Exit ----------
+function enterARUI(){ $('app').classList.add('arMode'); $('arBar').hidden = false; $('arNext').textContent = step===steps.length-1 ? 'Restart ↺' : 'Next ›'; }
+function exitARUI(){ if (!$('app').classList.contains('arMode')) return; $('app').classList.remove('arMode'); $('arBar').hidden = true; setPanel(true); }
+$('arNext').onclick = () => { $('btnNext').click(); };
+$('arExit').onclick = () => {
+  if (markerOn) stopMarker();
+  if (fakeAR) stopFakeAR();
+  if (renderer.xr.isPresenting) renderer.xr.getSession().end();
+};
+$('arBar').addEventListener('beforexrselect', e => e.preventDefault());
+
+// ---------- frame loop ----------
+const clock = new THREE.Clock();
+function frameUpdate(time, frame){
+  const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05), now = performance.now();
+  for (let k=tweens.length-1;k>=0;k--){ const tw = tweens[k]; if (!tw) continue; const t = Math.min((now-tw.t0)/tw.dur,1); tw.fn(t); if (t>=1){ const i = tweens.indexOf(tw); if (i >= 0) tweens.splice(i,1); tw.done && tw.done(); } }
+
+  S.th = THREE.MathUtils.clamp(S.th, 0, 90); S.B = THREE.MathUtils.clamp(S.B, 0, B_MAX); S.A = THREE.MathUtils.clamp(S.A, 0.01, 0.05);
+  layoutLoop();
+  loopG.rotation.y = Math.PI/2 - THREE.MathUtils.degToRad(S.th);          // normal n = (cos θ, 0, sin θ); B = +X
+  updateField(dt); updateArc(); updateShadow();
+  drawReadout(); readout();
+  arrN.visible = true;
+
+  if (logo.visible && !introDone) logo.rotation.y += reduce ? 0 : dt*0.25*(tweens.length?0:1);
+  for (let k=sparks.length-1;k>=0;k--){ const s = sparks[k]; s.userData.v.y -= dt*1.2; s.position.addScaledVector(s.userData.v, dt*0.25); s.userData.life -= dt*0.8; s.scale.setScalar(Math.max(s.userData.life,0.01)); if (s.userData.life<=0){ lab.remove(s); sparks.splice(k,1); } }
+  updateHost(now);
+  if (frame && hitSource && !placed){
+    const hits = frame.getHitTestResults(hitSource);
+    if (hits.length){ const pose = hits[0].getPose(renderer.xr.getReferenceSpace()); reticle.visible = true; reticle.matrix.fromArray(pose.transform.matrix); }
+    else reticle.visible = false;
+  }
+  audioTick();
+  fakeARCamera();
+}
+function loop(time, frame){ frameUpdate(time, frame); if (!renderer.xr.isPresenting && controls.enabled) controls.update(); renderer.render(scene, camera); }
+renderer.setAnimationLoop(loop);
+
+await document.fonts.ready;
+[regionLab, thLab, screenLab, shLab].forEach(l => l.redraw()); rdLast = ''; layoutKey = '';
+readout();
+window.__wb = { S, showStep, endIntro, camera, controls, world, flux, spinIt, topView, homeView, get step(){ return step; }, get nThread(){ return nThread; }, get nTotal(){ return nTotal; }, get markerOn(){ return markerOn; }, get held(){ return held; } };
+</script>
+
+</body></html>
