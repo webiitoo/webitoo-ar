@@ -16,6 +16,7 @@ Web AR experiments for school students, made by Webitoo. One folder per lesson (
 - `circular-coil/` — Field of a circular coil: the field shape, N and S faces, and B ∝ N I / r.
 - `solenoid/` — Field of a solenoid: inside vs outside, the poles, and the iron core.
 - `simple-pendulum/` — The simple pendulum: T = 2π√(L/g); the period depends on L and g, not on the mass or a small amplitude. Show on your table locks onto `poster.png`; iPhone Place anywhere opens an animated model.
+- `mass-spring/` — The mass-spring oscillator: T = 2π√(m/k); a horizontal and a vertical spring (same m, same k) have the same period, even on the Moon. Show on your table locks onto `poster.png`; iPhone Place anywhere opens an animated model.
 
 The physics labs open with **View in AR** (Android: the interactive lab on your table; iPhone: AR Quick Look with a still 3D model, animated for magnetic flux and magnetic torque). Each has a QR-free `card.png` for the website card.
 
