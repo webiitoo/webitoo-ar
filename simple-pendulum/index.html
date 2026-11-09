@@ -945,9 +945,9 @@ $('arExit').onclick = () => {
 const clock = new THREE.Clock();
 let activeCam = camera, activeCanvas = renderer.domElement, roT = 0;
 function frameUpdate(time, frame){
-  const dt = Math.min(clock.getDelta(), 0.05), now = performance.now();
+  const rawDt = clock.getDelta(), dt = Math.min(rawDt, 0.05), now = performance.now();
   for (let k=tweens.length-1;k>=0;k--){ const tw = tweens[k]; const t = Math.min((now-tw.t0)/tw.dur,1); tw.fn(t); if (t>=1){ tweens.splice(k,1); tw.done && tw.done(); } }
-  if (introDone) simulate(dt);
+  if (introDone) simulate(Math.min(rawDt, 0.1));   // keep the pendulums in real time even at a low frame rate
   updatePendulumVisuals(now);
   if (now - roT > 120){ roT = now; readout(); drawWatch(); }
     updateSay(dt);
