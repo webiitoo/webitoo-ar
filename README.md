@@ -15,6 +15,7 @@ Web AR experiments for school students, made by Webitoo. One folder per lesson (
 - `two-wires/` — Force between two parallel wires: attraction, repulsion and the neutral point.
 - `circular-coil/` — Field of a circular coil: the field shape, N and S faces, and B ∝ N I / r.
 - `solenoid/` — Field of a solenoid: inside vs outside, the poles, and the iron core.
+- `simple-pendulum/` — The simple pendulum: T = 2π√(L/g); the period depends on L and g, not on the mass or a small amplitude. Show on your table locks onto `poster.png`; iPhone Place anywhere opens an animated model.
 
 The physics labs open with **View in AR** (Android: the interactive lab on your table; iPhone: AR Quick Look with a still 3D model, animated for magnetic flux and magnetic torque). Each has a QR-free `card.png` for the website card.
 
